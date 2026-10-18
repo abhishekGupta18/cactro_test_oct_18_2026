@@ -27,54 +27,55 @@ export class BookingRepository implements IBookingRepository {
     customerId: string,
     seatsCount: number,
   ): Promise<BookingWithDetails> {
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Acquire pessimistic lock on the event row
-      const events: Event[] = await tx.$queryRaw`
-        SELECT * FROM events WHERE id = ${eventId} FOR UPDATE
-      `;
-
-      if (!events || events.length === 0) {
-        throw new NotFoundException(`Event with ID '${eventId}' not found`);
-      }
-
-      const event = events[0];
-
-      // 2. Strict capacity validation inside the locked transaction
-      if (event.availableSeats < seatsCount) {
-        throw new BadRequestException(
-          `Insufficient seats available. Requested: ${seatsCount}, Available: ${event.availableSeats}`,
-        );
-      }
-
-      // 3. Atomic decrement of available seats
-      const updatedEvent = await tx.event.update({
-        where: { id: eventId },
-        data: {
-          availableSeats: {
-            decrement: seatsCount,
-          },
-        },
-      });
-
-      const totalAmount = event.price * seatsCount;
-
-      // 4. Create confirmed booking record
-      const booking = await tx.booking.create({
-        data: {
-          eventId,
-          customerId,
-          seatsCount,
-          totalAmount,
-          status: 'CONFIRMED',
-        },
-        include: {
-          event: true,
-          customer: true,
-        },
-      });
-
-      return booking as BookingWithDetails;
+    // 1. Fetch event and verify existence
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
     });
+
+    if (!event) {
+      throw new NotFoundException(`Event with ID '${eventId}' not found`);
+    }
+
+    // 2. Atomic conditional decrement at database engine level
+    // Native row-level test-and-set: mathematically prevents overselling without connection pool lock contention
+    const updateResult = await this.prisma.event.updateMany({
+      where: {
+        id: eventId,
+        availableSeats: {
+          gte: seatsCount,
+        },
+      },
+      data: {
+        availableSeats: {
+          decrement: seatsCount,
+        },
+      },
+    });
+
+    if (updateResult.count === 0) {
+      throw new BadRequestException(
+        `Insufficient seats available. Requested: ${seatsCount}, Available: 0. Event is sold out!`,
+      );
+    }
+
+    const totalAmount = event.price * seatsCount;
+
+    // 3. Create confirmed booking record
+    const booking = await this.prisma.booking.create({
+      data: {
+        eventId,
+        customerId,
+        seatsCount,
+        totalAmount,
+        status: 'CONFIRMED',
+      },
+      include: {
+        event: true,
+        customer: true,
+      },
+    });
+
+    return booking as BookingWithDetails;
   }
 
   /**

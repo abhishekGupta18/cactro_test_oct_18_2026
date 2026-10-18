@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { QueuesModule } from './modules/queues/queues.module';
@@ -22,7 +23,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
     EventsModule,
     BookingsModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}

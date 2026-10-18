@@ -13,8 +13,8 @@ async function bootstrap() {
   // Enable Cross-Origin Resource Sharing
   app.enableCors();
 
-  // Global API Prefix
-  app.setGlobalPrefix('api/v1');
+  // Global API Prefix (excluding root redirect and health check)
+  app.setGlobalPrefix('api/v1', { exclude: ['/', 'health'] });
 
   // Global Exception Filter
   app.useGlobalFilters(new AllExceptionsFilter());
