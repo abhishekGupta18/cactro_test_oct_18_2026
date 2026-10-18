@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ORGANIZER
+  CUSTOMER
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      Role      @default(CUSTOMER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  events    Event[]   @relation("OrganizerEvents")
+  bookings  Booking[] @relation("CustomerBookings")
+
+  @@map("users")
+}
+
+model Event {
+  id             String    @id @default(uuid())
+  title          String
+  description    String?
+  location       String
+  dateTime       DateTime
+  totalSeats     Int
+  availableSeats Int
+  price          Float     @default(0.0)
+  organizerId    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organizer      User      @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+  bookings       Booking[]
+
+  @@index([organizerId])
+  @@index([dateTime])
+  @@map("events")
+}
+
+model Booking {
+  id          String        @id @default(uuid())
+  eventId     String
+  customerId  String
+  seatsCount  Int           @default(1)
+  totalAmount Float         @default(0.0)
+  status      BookingStatus @default(CONFIRMED)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  event       Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  customer    User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([customerId])
+  @@map("bookings")
+}
