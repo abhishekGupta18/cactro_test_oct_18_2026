@@ -18,35 +18,35 @@ enum BookingStatus {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
   password  String
   name      String
-  role      Role      @default(CUSTOMER)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  events    Event[]   @relation("OrganizerEvents")
-  bookings  Booking[] @relation("CustomerBookings")
+  events   Event[]   @relation("OrganizerEvents")
+  bookings Booking[] @relation("CustomerBookings")
 
   @@map("users")
 }
 
 model Event {
-  id             String    @id @default(uuid())
+  id             String   @id @default(uuid())
   title          String
   description    String?
   location       String
   dateTime       DateTime
   totalSeats     Int
   availableSeats Int
-  price          Float     @default(0.0)
+  price          Float    @default(0.0)
   organizerId    String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  organizer      User      @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
-  bookings       Booking[]
+  organizer User      @relation("OrganizerEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+  bookings  Booking[]
 
   @@index([organizerId])
   @@index([dateTime])
@@ -63,8 +63,8 @@ model Booking {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  event       Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  customer    User          @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  customer User  @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
   @@index([customerId])
